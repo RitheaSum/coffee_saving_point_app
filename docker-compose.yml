@@ -1,0 +1,29 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: coffee-server
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+      - DB_PATH=/data/coffee.db
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+    volumes:
+      - coffee_db:/data
+    expose:
+      - "3001"
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: coffee-client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+
+volumes:
+  coffee_db:

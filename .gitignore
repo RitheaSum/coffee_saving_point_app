@@ -1,0 +1,7 @@
+**/node_modules/
+/server/coffee.db
+/server/coffee.db-journal
+/server/coffee.db-shm
+/server/coffee.db-wal
+/server/coffee.db.backup
+/server/coffee.db.backup-journal
