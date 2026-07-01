@@ -1,19 +1,52 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, User } from '../api';
 import QRScanner from '../components/QRScanner';
 import { StampCard } from '../components/CustomerComponents';
+import { Footer } from '../components/Footer';
 
 const POINTS_TO_REDEEM = 10;
+const STAFF_SESSION_KEY = 'coffee_staff_token';
 
 export default function StaffPage() {
   const nav = useNavigate();
+
+  // ── Auth state ───────────────────────────────────────────────
+  const [staffToken, setStaffToken] = useState('');
+  const [authed, setAuthed] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+
+  // ── Staff page state ─────────────────────────────────────────
   const [scanning, setScanning] = useState(false);
   const [manualId, setManualId] = useState('');
   const [customer, setCustomer] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(STAFF_SESSION_KEY);
+    if (saved) {
+      api.staffAuth(saved)
+        .then(() => { setStaffToken(saved); setAuthed(true); })
+        .catch(() => sessionStorage.removeItem(STAFF_SESSION_KEY));
+    }
+  }, []);
+
+  const handleAuth = async () => {
+    setAuthLoading(true);
+    setAuthError('');
+    try {
+      await api.staffAuth(staffToken);
+      sessionStorage.setItem(STAFF_SESSION_KEY, staffToken);
+      setAuthed(true);
+    } catch {
+      setAuthError('Incorrect staff token.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   const clearMessages = () => { setError(''); setSuccess(''); };
 
@@ -33,16 +66,14 @@ export default function StaffPage() {
     }
   }, []);
 
-  const handleScan = useCallback((data: string) => {
-    lookupUser(data);
-  }, [lookupUser]);
+  const handleScan = useCallback((data: string) => { lookupUser(data); }, [lookupUser]);
 
   const handleAddPoint = async () => {
     if (!customer) return;
     setLoading(true);
     clearMessages();
     try {
-      const { user, message } = await api.addPoint(customer.id);
+      const { user, message } = await api.addPoint(customer.id, staffToken);
       setCustomer(user);
       setSuccess(message);
     } catch (e: unknown) {
@@ -58,7 +89,7 @@ export default function StaffPage() {
     setLoading(true);
     clearMessages();
     try {
-      const { user, message } = await api.redeem(customer.id);
+      const { user, message } = await api.redeem(customer.id, staffToken);
       setCustomer(user);
       setSuccess(message);
     } catch (e: unknown) {
@@ -76,11 +107,53 @@ export default function StaffPage() {
 
   const canRedeem = (customer?.points ?? 0) >= POINTS_TO_REDEEM;
 
+  // ── Auth gate ────────────────────────────────────────────────
+  if (!authed) {
+    return (
+      <div className="page">
+        <div className="topbar">
+          <img src="/grid_logo.png" className="topbar-logo" alt="Grid Coffee" />
+          <button className="back-btn" onClick={() => nav('/')}>←</button>
+          <h1>Staff Access</h1>
+        </div>
+        <div className="container">
+          <div className="card" style={{ marginTop: 40 }}>
+            <div style={{ fontSize: '2rem', textAlign: 'center', marginBottom: 8 }}>🔑</div>
+            <h2 style={{ fontWeight: 700, textAlign: 'center', marginBottom: 4 }}>Staff Login</h2>
+            <p className="text-muted text-center mt-8" style={{ marginBottom: 20 }}>
+              Enter the staff access token to continue.
+            </p>
+            <div className="form-group">
+              <label>Staff Token</label>
+              <input
+                type="password"
+                placeholder="Enter staff token"
+                value={staffToken}
+                onChange={(e) => setStaffToken(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
+              />
+            </div>
+            {authError && <div className="alert alert-error">{authError}</div>}
+            <button
+              className="btn btn-primary mt-12"
+              onClick={handleAuth}
+              disabled={authLoading || !staffToken}
+            >
+              {authLoading ? 'Checking…' : 'Log In'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Main staff page ──────────────────────────────────────────
   return (
     <div className="page">
       <div className="topbar">
+        <img src="/grid_logo.png" className="topbar-logo" alt="Grid Coffee" />
         <button className="back-btn" onClick={() => nav('/')}>←</button>
-        <h1>☕ Staff — Add Points</h1>
+        <h1>Staff — Add Stamp</h1>
       </div>
 
       <div className="container">
@@ -88,14 +161,14 @@ export default function StaffPage() {
         {!customer && (
           <>
             <div className="card">
-              <h2 style={{ fontWeight: 800, marginBottom: 8 }}>Scan Customer QR</h2>
+              <h2 style={{ fontWeight: 700, marginBottom: 8 }}>Scan Customer QR</h2>
               <p className="text-muted" style={{ marginBottom: 16 }}>
                 Ask the customer to show their QR code on screen.
               </p>
 
               {!scanning ? (
                 <button className="btn btn-primary" onClick={() => setScanning(true)}>
-                  📷 Open Camera Scanner
+                  Open Camera Scanner
                 </button>
               ) : (
                 <>
@@ -111,7 +184,7 @@ export default function StaffPage() {
             </div>
 
             <div className="card" style={{ marginTop: 12 }}>
-              <h3 style={{ fontWeight: 800, marginBottom: 12 }}>Or Enter ID Manually</h3>
+              <h3 style={{ fontWeight: 700, marginBottom: 12 }}>Or Enter ID Manually</h3>
               <div className="form-group" style={{ marginBottom: 12 }}>
                 <input
                   type="text"
@@ -126,7 +199,7 @@ export default function StaffPage() {
                 onClick={() => lookupUser(manualId)}
                 disabled={loading || !manualId.trim()}
               >
-                {loading ? 'Looking up…' : '🔍 Look Up Customer'}
+                {loading ? 'Looking up…' : 'Look Up Customer'}
               </button>
             </div>
 
@@ -143,14 +216,14 @@ export default function StaffPage() {
                   {customer.name ? customer.name[0].toUpperCase() : '☕'}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>
+                  <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>
                     {customer.name || 'Coffee Lover'}
                   </div>
-                  <div style={{ fontSize: '.8rem', opacity: .7, fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: '.75rem', opacity: .6, fontFamily: 'monospace' }}>
                     {customer.id}
                   </div>
-                  <div style={{ fontSize: '.85rem', opacity: .85, marginTop: 2 }}>
-                    🏆 {customer.total_redeemed} free drink{customer.total_redeemed !== 1 ? 's' : ''} redeemed
+                  <div style={{ fontSize: '.82rem', opacity: .75, marginTop: 2 }}>
+                    {customer.total_redeemed} free drink{customer.total_redeemed !== 1 ? 's' : ''} redeemed
                   </div>
                 </div>
               </div>
@@ -166,7 +239,7 @@ export default function StaffPage() {
                   onClick={handleAddPoint}
                   disabled={loading}
                 >
-                  {loading ? 'Adding…' : '☕ Add 1 Stamp (+1 point)'}
+                  {loading ? 'Adding…' : 'Add 1 Stamp'}
                 </button>
 
                 {canRedeem && (
@@ -175,7 +248,7 @@ export default function StaffPage() {
                     onClick={handleRedeem}
                     disabled={loading}
                   >
-                    🎁 Redeem Free Drink (−10 pts)
+                    Redeem Free Drink (−10 stamps)
                   </button>
                 )}
 
@@ -187,6 +260,8 @@ export default function StaffPage() {
           </>
         )}
       </div>
+
+      <Footer />
     </div>
   );
 }

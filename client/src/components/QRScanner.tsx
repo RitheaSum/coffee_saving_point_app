@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 interface QRScannerProps {
   onScan: (data: string) => void;
@@ -7,36 +7,36 @@ interface QRScannerProps {
 }
 
 export default function QRScanner({ onScan, active }: QRScannerProps) {
-  const mountedRef = useRef(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannedRef = useRef(false); // prevent firing onScan twice
 
   useEffect(() => {
     if (!active) return;
-    // Prevent double-mount in dev mode
-    if (mountedRef.current) return;
-    mountedRef.current = true;
 
-    const scanner = new Html5QrcodeScanner(
-      'qr-reader',
-      {
-        fps: 10,
-        qrbox: { width: 240, height: 240 },
-        rememberLastUsedCamera: true,
-        supportedScanTypes: [],
-      },
-      /* verbose= */ false
-    );
+    scannedRef.current = false;
+    const scanner = new Html5Qrcode('qr-reader', { verbose: false });
+    scannerRef.current = scanner;
 
-    scanner.render(
-      (decodedText) => {
-        scanner.clear().catch(() => {});
-        onScan(decodedText.trim());
-      },
-      () => { /* ignore scan errors */ }
-    );
+    const startScanner = (facingMode: string) =>
+      scanner.start(
+        { facingMode },
+        { fps: 10, qrbox: { width: 240, height: 240 } },
+        (decodedText) => {
+          if (scannedRef.current) return;
+          scannedRef.current = true;
+          onScan(decodedText.trim());
+        },
+        () => {}
+      );
+
+    startScanner('environment').catch(() => {
+      // Back camera unavailable — fall back to any camera
+      startScanner('user').catch(() => {});
+    });
 
     return () => {
-      mountedRef.current = false;
-      scanner.clear().catch(() => {});
+      scannerRef.current = null;
+      scanner.stop().catch(() => {});
     };
   }, [active, onScan]);
 

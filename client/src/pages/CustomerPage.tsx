@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { api, User, Transaction } from '../api';
 import { StampCard, QRModal, TransactionList } from '../components/CustomerComponents';
+import { Footer } from '../components/Footer';
 
 const STORAGE_KEY = 'coffee_user_id';
 const POINTS_TO_REDEEM = 10;
@@ -9,7 +9,6 @@ const POINTS_TO_REDEEM = 10;
 type View = 'register' | 'dashboard';
 
 export default function CustomerPage() {
-  const nav = useNavigate();
   const [view, setView] = useState<View>('register');
   const [user, setUser] = useState<User | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -52,7 +51,8 @@ export default function CustomerPage() {
       const { user: newUser, isNew } = await api.register(body);
       localStorage.setItem(STORAGE_KEY, newUser.id);
       setUser(newUser);
-      setTransactions([]);
+      const { transactions: txs } = await api.getTransactions(newUser.id);
+      setTransactions(txs);
       setView('dashboard');
       setInfo(isNew ? '🎉 Welcome! Your loyalty card is ready.' : '👋 Welcome back!');
     } catch (e: unknown) {
@@ -81,7 +81,7 @@ export default function CustomerPage() {
     return (
       <div className="page">
         <div className="topbar">
-          <button className="back-btn" onClick={() => nav('/')}>←</button>
+          <img src="/grid_logo.png" className="topbar-logo" alt="Grid Coffee" />
           <h1>My Rewards Card</h1>
         </div>
         <div className="container"><div className="spinner" /></div>
@@ -94,7 +94,7 @@ export default function CustomerPage() {
     return (
       <div className="page">
         <div className="topbar">
-          <button className="back-btn" onClick={() => nav('/')}>←</button>
+          <img src="/grid_logo.png" className="topbar-logo" alt="Grid Coffee" />
           <h1>Join Rewards</h1>
         </div>
         <div className="container">
@@ -110,7 +110,7 @@ export default function CustomerPage() {
               <label>Your Name (optional)</label>
               <input
                 type="text"
-                placeholder="e.g. Alex"
+                placeholder="e.g. Romdoul"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -120,7 +120,7 @@ export default function CustomerPage() {
               <label>Phone Number</label>
               <input
                 type="tel"
-                placeholder="+1 555 000 1234"
+                placeholder="012xxxxxxx"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleRegister(true)}
@@ -153,6 +153,7 @@ export default function CustomerPage() {
             No app download needed · Works in your browser
           </p>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -163,7 +164,7 @@ export default function CustomerPage() {
   return (
     <div className="page">
       <div className="topbar">
-        <button className="back-btn" onClick={() => nav('/')}>←</button>
+        <img src="/grid_logo.png" className="topbar-logo" alt="Grid Coffee" />
         <h1>My Rewards Card</h1>
       </div>
 
@@ -212,8 +213,8 @@ export default function CustomerPage() {
 
         {/* Stats */}
         {(user?.total_redeemed ?? 0) > 0 && (
-          <p className="text-muted text-center mt-12">
-            🏆 You've redeemed <strong>{user?.total_redeemed}</strong> free drink{user?.total_redeemed !== 1 ? 's' : ''} so far!
+          <p className="text-center mt-12" style={{ color: 'rgba(255,255,255,.75)', fontSize: '.85rem' }}>
+            🧋 You've redeemed <strong>{user?.total_redeemed}</strong> free drink{user?.total_redeemed !== 1 ? 's' : ''} so far!
           </p>
         )}
 
@@ -223,10 +224,12 @@ export default function CustomerPage() {
           <TransactionList items={transactions} />
         </div>
 
-        <button className="btn btn-outline mt-16" onClick={handleLogout} style={{ color: 'var(--c400)' }}>
+        <button className="btn btn-outline mt-16" onClick={handleLogout} style={{ color: 'rgba(255,255,255,.6)', borderColor: 'rgba(255,255,255,.2)' }}>
           Log Out / Switch Account
         </button>
       </div>
+
+      <Footer />
 
       {showQR && user && (
         <QRModal userId={user.id} onClose={() => setShowQR(false)} />

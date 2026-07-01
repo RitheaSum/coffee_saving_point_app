@@ -5,3 +5,5 @@
 /server/coffee.db-wal
 /server/coffee.db.backup
 /server/coffee.db.backup-journal
+/server/.env
+/client/vite.config.ts

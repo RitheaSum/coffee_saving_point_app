@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, User, Stats } from '../api';
+import { Footer } from '../components/Footer';
 
 const SESSION_KEY = 'coffee_admin_pwd';
 
@@ -65,6 +66,7 @@ export default function AdminPage() {
     return (
       <div className="page">
         <div className="topbar">
+          <img src="/grid_logo.png" className="topbar-logo" alt="Grid Coffee" />
           <button className="back-btn" onClick={() => nav('/')}>←</button>
           <h1>Admin Login</h1>
         </div>
@@ -93,9 +95,6 @@ export default function AdminPage() {
             >
               {authLoading ? 'Checking…' : 'Log In'}
             </button>
-            <p className="text-muted text-center mt-12" style={{ fontSize: '.8rem' }}>
-              Default password: <code>admin123</code>
-            </p>
           </div>
         </div>
       </div>
@@ -106,8 +105,9 @@ export default function AdminPage() {
   return (
     <div className="page">
       <div className="topbar">
+        <img src="/grid_logo.png" className="topbar-logo" alt="Grid Coffee" />
         <button className="back-btn" onClick={() => nav('/')}>←</button>
-        <h1>📊 Admin Dashboard</h1>
+        <h1>Admin Dashboard</h1>
       </div>
 
       <div className="container">
@@ -203,13 +203,15 @@ export default function AdminPage() {
             <button
               className="btn btn-outline mt-16"
               onClick={() => { sessionStorage.removeItem(SESSION_KEY); setAuthed(false); setPassword(''); }}
-              style={{ color: 'var(--c400)' }}
+              style={{ color: 'rgba(255,255,255,.6)', borderColor: 'rgba(255,255,255,.2)' }}
             >
               Log Out
             </button>
           </>
         )}
       </div>
+
+      <Footer />
     </div>
   );
 }

@@ -1,15 +1,53 @@
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const { randomUUID } = require('crypto');
 const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const POINTS_PER_DRINK = 10;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const STAFF_TOKEN    = process.env.STAFF_TOKEN;
 
-app.use(cors());
-app.use(express.json());
+if (!ADMIN_PASSWORD || !STAFF_TOKEN) {
+  console.error('FATAL: ADMIN_PASSWORD and STAFF_TOKEN environment variables are required');
+  process.exit(1);
+}
+
+// CORS — restrict to explicit origin or block cross-origin by default
+const CORS_ORIGIN = process.env.CORS_ORIGIN;
+app.use(cors(CORS_ORIGIN ? { origin: CORS_ORIGIN } : { origin: false }));
+
+// Trust first proxy (needed for ngrok / reverse proxies so rate-limit works correctly)
+app.set('trust proxy', 1);
+
+app.use(express.json({ limit: '16kb' }));
+
+// Rate limiter for auth endpoints (20 attempts per 15 min)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
+// ─── Auth middleware ───────────────────────────────────────────────────────────
+
+function requireStaff(req, res, next) {
+  if (req.headers['x-staff-token'] !== STAFF_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (req.headers['x-admin-password'] !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+  next();
+}
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 
@@ -60,6 +98,9 @@ app.post('/api/users/register', (req, res) => {
   }
 });
 
+// Health check (used by Docker healthcheck)
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
 // Get user by ID or phone
 app.get('/api/users/:id', (req, res) => {
   try {
@@ -88,8 +129,8 @@ app.get('/api/users/:id/transactions', (req, res) => {
 
 // ─── Points ───────────────────────────────────────────────────────────────────
 
-// Add 1 point (staff action)
-app.post('/api/points/add', (req, res) => {
+// Add 1 point (staff action — requires staff token)
+app.post('/api/points/add', requireStaff, (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId is required.' });
@@ -108,8 +149,8 @@ app.post('/api/points/add', (req, res) => {
   }
 });
 
-// Redeem free drink
-app.post('/api/points/redeem', (req, res) => {
+// Redeem free drink (staff action — requires staff token)
+app.post('/api/points/redeem', requireStaff, (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId is required.' });
@@ -134,14 +175,25 @@ app.post('/api/points/redeem', (req, res) => {
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
-// Simple password middleware for admin routes
-function requireAdmin(req, res, next) {
-  const pwd = req.headers['x-admin-password'];
-  if (pwd !== ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Unauthorized.' });
+// Verify admin password
+app.post('/api/admin/auth', authLimiter, (req, res) => {
+  const { password } = req.body;
+  if (password === ADMIN_PASSWORD) {
+    res.json({ ok: true });
+  } else {
+    res.status(401).json({ error: 'Wrong password.' });
   }
-  next();
-}
+});
+
+// Verify staff token
+app.post('/api/staff/auth', authLimiter, (req, res) => {
+  const { token } = req.body;
+  if (token === STAFF_TOKEN) {
+    res.json({ ok: true });
+  } else {
+    res.status(401).json({ error: 'Wrong token.' });
+  }
+});
 
 app.get('/api/admin/stats', requireAdmin, (req, res) => {
   try {
@@ -163,16 +215,6 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
     res.json({ users });
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
-  }
-});
-
-// Verify admin password
-app.post('/api/admin/auth', (req, res) => {
-  const { password } = req.body;
-  if (password === ADMIN_PASSWORD) {
-    res.json({ ok: true });
-  } else {
-    res.status(401).json({ error: 'Wrong password.' });
   }
 });
 

@@ -46,17 +46,17 @@ export const api = {
   getTransactions: (id: string) =>
     request<{ transactions: Transaction[] }>(`/users/${encodeURIComponent(id)}/transactions`),
 
-  addPoint: (userId: string) =>
+  addPoint: (userId: string, staffToken: string) =>
     request<{ user: User; message: string }>('/points/add', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-staff-token': staffToken },
       body: JSON.stringify({ userId }),
     }),
 
-  redeem: (userId: string) =>
+  redeem: (userId: string, staffToken: string) =>
     request<{ user: User; message: string }>('/points/redeem', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-staff-token': staffToken },
       body: JSON.stringify({ userId }),
     }),
 
@@ -65,6 +65,13 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
+    }),
+
+  staffAuth: (token: string) =>
+    request<{ ok: boolean }>('/staff/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
     }),
 
   adminStats: (password: string) =>
