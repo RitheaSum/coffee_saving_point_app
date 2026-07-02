@@ -7,12 +7,13 @@ RUN npm install --omit=dev
 
 COPY . .
 
-# Data directory for SQLite database (mount as volume to persist data)
-RUN mkdir -p /app/data
-
 # Run as non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN chown -R appuser:appgroup /app
+
+# Create the data directory for SQLite and give the non-root user write access
+RUN mkdir -p /data && chown appuser:appgroup /data
+
 USER appuser
 
 EXPOSE 3001
