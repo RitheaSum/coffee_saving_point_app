@@ -43,6 +43,15 @@ export default function CustomerPage() {
     if (savedId) loadUser(savedId);
   }, [loadUser]);
 
+  useEffect(() => {
+    // Auto-refresh every 10 seconds when on dashboard
+    if (view !== 'dashboard' || !user) return;
+    const interval = setInterval(() => {
+      loadUser(user.id);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [view, user, loadUser]);
+
   const handleRegister = async (usePhone: boolean) => {
     setLoading(true);
     setError('');
