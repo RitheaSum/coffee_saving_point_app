@@ -184,6 +184,7 @@ export default function AdminPage() {
                         <td style={{ fontSize: '.8rem', color: 'var(--c400)' }}>
                           {new Date(u.created_at).toLocaleDateString(undefined, {
                             month: 'short', day: 'numeric', year: '2-digit',
+                            timeZone: 'Asia/Phnom_Penh',
                           })}
                         </td>
                       </tr>

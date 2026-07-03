@@ -74,6 +74,7 @@ export function TransactionList({ items }: TransactionListProps) {
               {new Date(tx.created_at).toLocaleString(undefined, {
                 month: 'short', day: 'numeric',
                 hour: '2-digit', minute: '2-digit',
+                timeZone: 'Asia/Phnom_Penh',
               })}
             </div>
           </div>
