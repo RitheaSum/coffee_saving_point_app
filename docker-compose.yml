@@ -10,7 +10,7 @@ services:
       - "host-gateway:host-gateway"
     environment:
       - PORT=4000
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@host-gateway:5432/${POSTGRES_DB}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@host-gateway:${POSTGRES_PORT}/${POSTGRES_DB}
     networks:
       - internal
     expose:
