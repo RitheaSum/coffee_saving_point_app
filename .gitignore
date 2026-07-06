@@ -7,3 +7,4 @@
 /server/coffee.db.backup-journal
 /server/.env
 /client/vite.config.ts
+.env

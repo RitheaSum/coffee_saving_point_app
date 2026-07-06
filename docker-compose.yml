@@ -5,12 +5,12 @@ services:
       dockerfile: Dockerfile
     container_name: coffee-server
     restart: unless-stopped
-    env_file: ./server/.env          # reads ADMIN_PASSWORD, STAFF_TOKEN, CORS_ORIGIN
+    env_file: ./server/.env          # reads POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
+    extra_hosts:
+      - "host-gateway:host-gateway"
     environment:
       - PORT=4000
-      - DB_PATH=/data/coffee.db
-    volumes:
-      - coffee_db:/data
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@host-gateway:5432/${POSTGRES_DB}
     networks:
       - internal
     expose:
@@ -40,5 +40,4 @@ networks:
   internal:
     driver: bridge
 
-volumes:
-  coffee_db:
+volumes: {}
