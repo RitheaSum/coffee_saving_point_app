@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api, User } from '../api';
 import QRScanner from '../components/QRScanner';
 import { StampCard } from '../components/CustomerComponents';
@@ -10,10 +10,11 @@ const STAFF_SESSION_KEY = 'coffee_staff_token';
 
 export default function StaffPage() {
   const nav = useNavigate();
+  const { token: urlToken } = useParams<{ token?: string }>();
 
   // ── Auth state ───────────────────────────────────────────────
-  const [staffToken, setStaffToken] = useState('');
-  const [authed, setAuthed] = useState(false);
+  const [staffToken, setStaffToken] = useState(urlToken ?? '');
+  const [authed, setAuthed] = useState(!!urlToken);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
 
@@ -26,13 +27,14 @@ export default function StaffPage() {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
+    if (urlToken) return; // URL token bypasses session-storage auth
     const saved = sessionStorage.getItem(STAFF_SESSION_KEY);
     if (saved) {
       api.staffAuth(saved)
         .then(() => { setStaffToken(saved); setAuthed(true); })
         .catch(() => sessionStorage.removeItem(STAFF_SESSION_KEY));
     }
-  }, []);
+  }, [urlToken]);
 
   const handleAuth = async () => {
     setAuthLoading(true);
