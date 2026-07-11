@@ -7,8 +7,9 @@ const pool = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const POINTS_PER_DRINK = 10;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const STAFF_TOKEN    = process.env.STAFF_TOKEN;
+const ADMIN_PASSWORD     = process.env.ADMIN_PASSWORD;
+const STAFF_TOKEN        = process.env.STAFF_TOKEN;
+const STAFF_BYPASS_CODE  = process.env.STAFF_BYPASS_CODE; // optional — used for password-free URL access
 
 if (!ADMIN_PASSWORD || !STAFF_TOKEN) {
   console.error('FATAL: ADMIN_PASSWORD and STAFF_TOKEN environment variables are required');
@@ -36,7 +37,9 @@ const authLimiter = rateLimit({
 // ─── Auth middleware ───────────────────────────────────────────────────────────
 
 function requireStaff(req, res, next) {
-  if (req.headers['x-staff-token'] !== STAFF_TOKEN) {
+  const token = req.headers['x-staff-token'];
+  const valid = token === STAFF_TOKEN || (STAFF_BYPASS_CODE && token === STAFF_BYPASS_CODE);
+  if (!valid) {
     return res.status(401).json({ error: 'Unauthorized.' });
   }
   next();
