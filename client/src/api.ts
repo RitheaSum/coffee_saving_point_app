@@ -23,6 +23,10 @@ export interface Stats {
   todayAdded: number;
 }
 
+export interface PointSaver extends User {
+  last_stamp_at: string;
+}
+
 const BASE = '/api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -81,6 +85,11 @@ export const api = {
 
   adminUsers: (password: string) =>
     request<{ users: User[] }>('/admin/users', {
+      headers: { 'x-admin-password': password },
+    }),
+
+  adminRecentPointSavers: (password: string) =>
+    request<{ users: PointSaver[] }>('/admin/recent-point-savers', {
       headers: { 'x-admin-password': password },
     }),
 

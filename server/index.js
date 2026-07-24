@@ -217,13 +217,18 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     const { rows: [r2] } = await pool.query('SELECT COALESCE(SUM(points),0) as t FROM users');
     const { rows: [r3] } = await pool.query('SELECT COALESCE(SUM(total_redeemed),0) as t FROM users');
     const { rows: [r4] } = await pool.query(
-      "SELECT COUNT(*) as c FROM transactions WHERE type='add' AND created_at::date = CURRENT_DATE"
+      `SELECT COALESCE(SUM(points), 0) as t
+       FROM transactions
+       WHERE type = 'add'
+         AND points > 0
+         AND ((created_at)::timestamptz AT TIME ZONE 'Asia/Phnom_Penh')::date =
+             (NOW() AT TIME ZONE 'Asia/Phnom_Penh')::date`
     );
     res.json({
       totalUsers:    Number(r1.c),
       totalPoints:   Number(r2.t),
       totalRedeemed: Number(r3.t),
-      todayAdded:    Number(r4.c),
+      todayAdded:    Number(r4.t),
     });
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
@@ -234,6 +239,33 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
   try {
     const { rows: users } = await pool.query('SELECT * FROM users ORDER BY points DESC, created_at DESC');
     res.json({ users });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
+app.get('/api/admin/recent-point-savers', requireAdmin, async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM (
+         SELECT DISTINCT ON (u.id)
+           u.id,
+           u.phone,
+           u.name,
+           u.points,
+           u.total_redeemed,
+           u.created_at,
+           t.created_at AS last_stamp_at
+         FROM transactions t
+         JOIN users u ON u.id = t.user_id
+         WHERE t.type = 'add' AND t.points > 0
+         ORDER BY u.id, t.created_at::timestamptz DESC
+       ) s
+       ORDER BY s.last_stamp_at::timestamptz DESC
+       LIMIT 10`
+    );
+
+    res.json({ users: rows });
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
   }

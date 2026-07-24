@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, User, Stats } from '../api';
+import { api, PointSaver, Stats, User } from '../api';
 import { Footer } from '../components/Footer';
 
 const SESSION_KEY = 'coffee_admin_pwd';
@@ -15,9 +15,13 @@ export default function AdminPage() {
   const [actionNotice, setActionNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [pointSavers, setPointSavers] = useState<PointSaver[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [adjustDialogUser, setAdjustDialogUser] = useState<User | null>(null);
+  const [adjustPointsInput, setAdjustPointsInput] = useState('');
+  const [deleteDialogUser, setDeleteDialogUser] = useState<User | null>(null);
 
   const showNotice = (type: 'success' | 'error', message: string) => {
     if (noticeTimerRef.current) {
@@ -44,17 +48,22 @@ export default function AdminPage() {
     }
   };
 
-  const refreshData = async () => {
-    setLoading(true);
+  const refreshData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const [s, u] = await Promise.all([api.adminStats(password), api.adminUsers(password)]);
+      const [s, u, p] = await Promise.all([
+        api.adminStats(password),
+        api.adminUsers(password),
+        api.adminRecentPointSavers(password),
+      ]);
       setStats(s);
       setUsers(u.users);
+      setPointSavers(p.users);
     } catch (error) {
       console.error(error);
       showNotice('error', 'Unable to refresh dashboard data.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -79,16 +88,21 @@ export default function AdminPage() {
     refreshData();
   }, [authed, password]);
 
-  const handleAdjustPoints = async (user: User) => {
-    const input = window.prompt(`Set points for ${user.name || user.id}`, String(user.points));
-    if (input === null) return;
+  const handleAdjustPoints = (user: User) => {
+    setAdjustDialogUser(user);
+    setAdjustPointsInput(String(user.points));
+  };
 
-    const nextPoints = Number(input.replace(/[^0-9-]/g, ''));
+  const submitAdjustPoints = async () => {
+    if (!adjustDialogUser) return;
+
+    const nextPoints = Number(adjustPointsInput.replace(/[^0-9-]/g, ''));
     if (Number.isNaN(nextPoints) || nextPoints < 0) {
       showNotice('error', 'Please enter a valid non-negative points value.');
       return;
     }
 
+    const user = adjustDialogUser;
     setActionLoading(true);
     setActionNotice(null);
     try {
@@ -102,6 +116,8 @@ export default function AdminPage() {
             }
           : prev
       );
+      await refreshData(true);
+      setAdjustDialogUser(null);
       showNotice('success', `Updated ${updated.name || updated.id} to ${updated.points} points.`);
     } catch (err) {
       console.error(err);
@@ -111,8 +127,14 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeleteUser = async (user: User) => {
-    if (!window.confirm(`Delete ${user.name || user.id} and all their records?`)) return;
+  const handleDeleteUser = (user: User) => {
+    setDeleteDialogUser(user);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!deleteDialogUser) return;
+
+    const user = deleteDialogUser;
     setActionLoading(true);
     setActionNotice(null);
 
@@ -128,6 +150,8 @@ export default function AdminPage() {
             }
           : prev
       );
+      await refreshData(true);
+      setDeleteDialogUser(null);
       showNotice('success', `Deleted ${user.name || user.id}.`);
     } catch (err) {
       console.error(err);
@@ -146,14 +170,7 @@ export default function AdminPage() {
     );
   });
 
-  // Latest registrations and today's counts (Phnom Penh timezone used elsewhere)
-  const newest = [...users]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 10);
-  const latestPointSavers = [...users]
-    .filter((u) => u.points > 0)
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 10);
+  // Today's counts in Phnom Penh timezone
   const todayKey = new Date().toLocaleDateString(undefined, { timeZone: 'Asia/Phnom_Penh' });
   const newRegsToday = users.filter(
     (u) => new Date(u.created_at).toLocaleDateString(undefined, { timeZone: 'Asia/Phnom_Penh' }) === todayKey
@@ -217,6 +234,71 @@ export default function AdminPage() {
         </div>
       )}
 
+      {adjustDialogUser && (
+        <div className="admin-modal-backdrop" onClick={() => !actionLoading && setAdjustDialogUser(null)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Adjust Points</h3>
+            <p className="admin-modal-text">Set points for {adjustDialogUser.name || adjustDialogUser.id}</p>
+            <input
+              className="admin-modal-input"
+              type="number"
+              min={0}
+              value={adjustPointsInput}
+              onChange={(e) => setAdjustPointsInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && submitAdjustPoints()}
+              autoFocus
+            />
+            <div className="admin-modal-actions">
+              <button
+                className="btn btn-outline btn-sm"
+                type="button"
+                onClick={() => setAdjustDialogUser(null)}
+                disabled={actionLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary btn-sm"
+                type="button"
+                onClick={submitAdjustPoints}
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteDialogUser && (
+        <div className="admin-modal-backdrop" onClick={() => !actionLoading && setDeleteDialogUser(null)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Delete User</h3>
+            <p className="admin-modal-text">
+              Delete {deleteDialogUser.name || deleteDialogUser.id} and all their records?
+            </p>
+            <div className="admin-modal-actions">
+              <button
+                className="btn btn-outline btn-sm"
+                type="button"
+                onClick={() => setDeleteDialogUser(null)}
+                disabled={actionLoading}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-danger btn-sm"
+                type="button"
+                onClick={confirmDeleteUser}
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="topbar">
         <img src="/grid_logo.png" className="topbar-logo" alt="Grid Coffee" />
         <button className="back-btn" onClick={() => nav('/')}>←</button>
@@ -255,12 +337,12 @@ export default function AdminPage() {
 
                     <div style={{ fontWeight: 800, marginBottom: 8 }}>Latest point savers</div>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                      {latestPointSavers.map((u, idx) => (
+                      {pointSavers.map((u, idx) => (
                         <li
                           key={u.id}
                           style={{
                             padding: '8px 0',
-                            borderBottom: idx === latestPointSavers.length - 1 ? 'none' : '1px solid var(--c100)',
+                            borderBottom: idx === pointSavers.length - 1 ? 'none' : '1px solid var(--c100)',
                           }}
                         >
                           <div style={{ fontWeight: 700 }}>{u.name || '—'}</div>
@@ -270,7 +352,7 @@ export default function AdminPage() {
                           </div>
                           <div style={{ fontSize: '.74rem', color: 'var(--c400)', marginTop: 2 }}>
                             Time:{' '}
-                            {new Date(u.created_at).toLocaleString(undefined, {
+                            {new Date(u.last_stamp_at).toLocaleString(undefined, {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric',
@@ -282,7 +364,7 @@ export default function AdminPage() {
                           </div>
                         </li>
                       ))}
-                      {latestPointSavers.length === 0 && (
+                      {pointSavers.length === 0 && (
                         <li style={{ color: 'var(--c400)', padding: 8 }}>No point savers yet.</li>
                       )}
                     </ul>

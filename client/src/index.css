@@ -602,6 +602,59 @@ body {
   opacity: 1;
 }
 
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 17, .5);
+  display: grid;
+  place-items: center;
+  z-index: 45;
+  padding: 16px;
+}
+
+.admin-modal {
+  width: min(420px, 100%);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, .2);
+}
+
+.admin-modal h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--black);
+}
+
+.admin-modal-text {
+  margin-top: 8px;
+  color: var(--text-sec);
+  font-size: .9rem;
+}
+
+.admin-modal-input {
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: .95rem;
+  outline: none;
+}
+
+.admin-modal-input:focus {
+  border-color: var(--black);
+}
+
+.admin-modal-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 @keyframes toastIn {
   from {
     opacity: 0;
@@ -712,6 +765,19 @@ body {
     top: 76px;
     max-width: none;
     min-width: 0;
+  }
+
+  .admin-modal {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .admin-modal-actions {
+    justify-content: stretch;
+  }
+
+  .admin-modal-actions .btn {
+    flex: 1;
   }
 
   .admin-left,
