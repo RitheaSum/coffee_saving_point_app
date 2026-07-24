@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, User, Stats } from '../api';
 import { Footer } from '../components/Footer';
@@ -7,16 +7,28 @@ const SESSION_KEY = 'coffee_admin_pwd';
 
 export default function AdminPage() {
   const nav = useNavigate();
+  const noticeTimerRef = useRef<number | null>(null);
   const [password, setPassword] = useState(sessionStorage.getItem(SESSION_KEY) || '');
   const [authed, setAuthed] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [actionError, setActionError] = useState('');
+  const [actionNotice, setActionNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [search, setSearch] = useState('');
+
+  const showNotice = (type: 'success' | 'error', message: string) => {
+    if (noticeTimerRef.current) {
+      window.clearTimeout(noticeTimerRef.current);
+    }
+    setActionNotice({ type, message });
+    noticeTimerRef.current = window.setTimeout(() => {
+      setActionNotice(null);
+      noticeTimerRef.current = null;
+    }, 3000);
+  };
 
   const handleAuth = async () => {
     setAuthLoading(true);
@@ -40,7 +52,7 @@ export default function AdminPage() {
       setUsers(u.users);
     } catch (error) {
       console.error(error);
-      setActionError('Unable to refresh dashboard data.');
+      showNotice('error', 'Unable to refresh dashboard data.');
     } finally {
       setLoading(false);
     }
@@ -54,6 +66,12 @@ export default function AdminPage() {
         .then(() => setAuthed(true))
         .catch(() => sessionStorage.removeItem(SESSION_KEY));
     }
+
+    return () => {
+      if (noticeTimerRef.current) {
+        window.clearTimeout(noticeTimerRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -67,12 +85,12 @@ export default function AdminPage() {
 
     const nextPoints = Number(input.replace(/[^0-9-]/g, ''));
     if (Number.isNaN(nextPoints) || nextPoints < 0) {
-      setActionError('Please enter a valid non-negative points value.');
+      showNotice('error', 'Please enter a valid non-negative points value.');
       return;
     }
 
     setActionLoading(true);
-    setActionError('');
+    setActionNotice(null);
     try {
       const { user: updated } = await api.adminUpdateUserPoints(user.id, password, nextPoints);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
@@ -84,9 +102,10 @@ export default function AdminPage() {
             }
           : prev
       );
+      showNotice('success', `Updated ${updated.name || updated.id} to ${updated.points} points.`);
     } catch (err) {
       console.error(err);
-      setActionError('Unable to update points.');
+      showNotice('error', 'Unable to update points.');
     } finally {
       setActionLoading(false);
     }
@@ -95,7 +114,7 @@ export default function AdminPage() {
   const handleDeleteUser = async (user: User) => {
     if (!window.confirm(`Delete ${user.name || user.id} and all their records?`)) return;
     setActionLoading(true);
-    setActionError('');
+    setActionNotice(null);
 
     try {
       await api.adminDeleteUser(user.id, password);
@@ -109,9 +128,10 @@ export default function AdminPage() {
             }
           : prev
       );
+      showNotice('success', `Deleted ${user.name || user.id}.`);
     } catch (err) {
       console.error(err);
-      setActionError('Unable to delete user.');
+      showNotice('error', 'Unable to delete user.');
     } finally {
       setActionLoading(false);
     }
@@ -182,6 +202,21 @@ export default function AdminPage() {
   // ── Dashboard ──────────────────────────────────────────────────
   return (
     <div className="page">
+      {actionNotice && (
+        <div className={`admin-toast admin-toast-${actionNotice.type}`} role="status" aria-live="polite">
+          <span className="admin-toast-icon">{actionNotice.type === 'success' ? '✓' : '!'}</span>
+          <span className="admin-toast-message">{actionNotice.message}</span>
+          <button
+            className="admin-toast-close"
+            type="button"
+            onClick={() => setActionNotice(null)}
+            aria-label="Dismiss alert"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <div className="topbar">
         <img src="/grid_logo.png" className="topbar-logo" alt="Grid Coffee" />
         <button className="back-btn" onClick={() => nav('/')}>←</button>
@@ -296,7 +331,6 @@ export default function AdminPage() {
                         fontFamily: 'var(--font)', fontSize: '.9rem', outline: 'none',
                       }}
                     />
-                    {actionError && <div className="alert alert-error" style={{ marginTop: 12 }}>{actionError}</div>}
                   </div>
 
                   <div className="admin-table-wrap">
