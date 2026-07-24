@@ -133,7 +133,7 @@ export default function AdminPage() {
   const latestPointSavers = [...users]
     .filter((u) => u.points > 0)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5);
+    .slice(0, 10);
   const todayKey = new Date().toLocaleDateString(undefined, { timeZone: 'Asia/Phnom_Penh' });
   const newRegsToday = users.filter(
     (u) => new Date(u.created_at).toLocaleDateString(undefined, { timeZone: 'Asia/Phnom_Penh' }) === todayKey
