@@ -129,7 +129,7 @@ export default function AdminPage() {
   // Latest registrations and today's counts (Phnom Penh timezone used elsewhere)
   const newest = [...users]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 5);
+    .slice(0, 10);
   const latestPointSavers = [...users]
     .filter((u) => u.points > 0)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
