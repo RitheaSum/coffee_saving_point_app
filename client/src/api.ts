@@ -83,4 +83,20 @@ export const api = {
     request<{ users: User[] }>('/admin/users', {
       headers: { 'x-admin-password': password },
     }),
+
+  adminUpdateUserPoints: (userId: string, password: string, points: number) =>
+    request<{ user: User }>(`/admin/users/${encodeURIComponent(userId)}/points`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-password': password,
+      },
+      body: JSON.stringify({ points }),
+    }),
+
+  adminDeleteUser: (userId: string, password: string) =>
+    request<{ ok: boolean }>(`/admin/users/${encodeURIComponent(userId)}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-password': password },
+    }),
 };

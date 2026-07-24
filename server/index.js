@@ -239,6 +239,52 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
   }
 });
 
+app.post('/api/admin/users/:id/points', requireAdmin, async (req, res) => {
+  try {
+    const { points } = req.body;
+    const id = req.params.id;
+
+    if (typeof points !== 'number' || Number.isNaN(points) || points < 0) {
+      return res.status(400).json({ error: 'Points must be a non-negative number.' });
+    }
+
+    const { rows } = await pool.query('SELECT * FROM users WHERE id = $1 OR phone = $2', [id, id]);
+    const user = rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const diff = points - user.points;
+    await pool.query('UPDATE users SET points = $1 WHERE id = $2', [points, user.id]);
+
+    if (diff !== 0) {
+      const type = diff > 0 ? 'add' : 'redeem';
+      await pool.query(
+        'INSERT INTO transactions (id, user_id, type, points, note, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
+        [randomUUID(), user.id, type, diff, 'Admin adjustment', new Date().toISOString()]
+      );
+    }
+
+    const { rows: updatedRows } = await pool.query('SELECT * FROM users WHERE id = $1', [user.id]);
+    res.json({ user: updatedRows[0] });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
+app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { rows } = await pool.query('SELECT * FROM users WHERE id = $1 OR phone = $2', [id, id]);
+    const user = rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    await pool.query('DELETE FROM transactions WHERE user_id = $1', [user.id]);
+    await pool.query('DELETE FROM users WHERE id = $1', [user.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error.' });
+  }
+});
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {

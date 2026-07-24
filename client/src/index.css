@@ -515,6 +515,30 @@ body {
 .customer-result-body { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
 
 /* ── Admin ────────────────────────────────────────────────────── */
+.admin-container {
+  max-width: 1120px;
+}
+
+.admin-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.admin-left {
+  width: 320px;
+  flex: 0 0 320px;
+}
+
+.admin-right {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -545,6 +569,11 @@ body {
 .users-table td { padding: 10px 12px; border-bottom: 1px solid var(--cream); }
 .users-table tr:last-child td { border-bottom: none; }
 .users-table tr:hover td { background: var(--cream); }
+.admin-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .badge {
   display: inline-block;
   padding: 3px 8px;
@@ -570,6 +599,69 @@ body {
 .redeem-banner-text { flex: 1; }
 .redeem-banner-title { font-weight: 700; font-size: .9rem; letter-spacing: .02em; }
 .redeem-banner-sub   { font-size: .76rem; opacity: .6; font-weight: 400; }
+
+@media (max-width: 640px) {
+  .page {
+    padding-bottom: 16px;
+  }
+
+  .container {
+    padding: 0 12px;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .topbar h1 {
+    font-size: .85rem;
+    flex: 1 1 100%;
+  }
+
+  .card {
+    padding: 18px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-layout {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .admin-left,
+  .admin-right {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .users-table th,
+  .users-table td {
+    padding: 10px 8px;
+    font-size: .78rem;
+  }
+
+  .users-table th:nth-child(5),
+  .users-table td:nth-child(5) {
+    min-width: 124px;
+  }
+
+  .btn {
+    padding: 12px 16px;
+  }
+
+  .btn-sm {
+    padding: 7px 12px;
+    font-size: .76rem;
+  }
+
+  .topbar-logo {
+    height: 42px;
+  }
+}
 
 /* ── Divider ──────────────────────────────────────────────────── */
 .divider {
