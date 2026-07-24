@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, PointSaver, Stats, User } from '../api';
 import { Footer } from '../components/Footer';
@@ -7,7 +7,6 @@ const SESSION_KEY = 'coffee_admin_pwd';
 
 export default function AdminPage() {
   const nav = useNavigate();
-  const noticeTimerRef = useRef<number | null>(null);
   const [password, setPassword] = useState(sessionStorage.getItem(SESSION_KEY) || '');
   const [authed, setAuthed] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
@@ -24,14 +23,7 @@ export default function AdminPage() {
   const [deleteDialogUser, setDeleteDialogUser] = useState<User | null>(null);
 
   const showNotice = (type: 'success' | 'error', message: string) => {
-    if (noticeTimerRef.current) {
-      window.clearTimeout(noticeTimerRef.current);
-    }
     setActionNotice({ type, message });
-    noticeTimerRef.current = window.setTimeout(() => {
-      setActionNotice(null);
-      noticeTimerRef.current = null;
-    }, 3000);
   };
 
   const handleAuth = async () => {
@@ -75,12 +67,6 @@ export default function AdminPage() {
         .then(() => setAuthed(true))
         .catch(() => sessionStorage.removeItem(SESSION_KEY));
     }
-
-    return () => {
-      if (noticeTimerRef.current) {
-        window.clearTimeout(noticeTimerRef.current);
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -220,17 +206,37 @@ export default function AdminPage() {
   return (
     <div className="page">
       {actionNotice && (
-        <div className={`admin-toast admin-toast-${actionNotice.type}`} role="status" aria-live="polite">
-          <span className="admin-toast-icon">{actionNotice.type === 'success' ? '✓' : '!'}</span>
-          <span className="admin-toast-message">{actionNotice.message}</span>
-          <button
-            className="admin-toast-close"
-            type="button"
-            onClick={() => setActionNotice(null)}
-            aria-label="Dismiss alert"
+        <div className="admin-modal-backdrop" onClick={() => setActionNotice(null)}>
+          <div
+            className={`admin-modal admin-notice-modal admin-notice-${actionNotice.type}`}
+            onClick={(e) => e.stopPropagation()}
+            role="alertdialog"
+            aria-live="assertive"
           >
-            ×
-          </button>
+            <div className="admin-notice-head">
+              <div className="admin-notice-icon" aria-hidden="true">
+                {actionNotice.type === 'success' ? '✓' : '!'}
+              </div>
+              <div>
+                <h3 className="admin-notice-title">
+                  {actionNotice.type === 'success' ? 'Update Complete' : 'Action Failed'}
+                </h3>
+                <div className="admin-notice-subtitle">
+                  {actionNotice.type === 'success' ? 'Your changes were saved.' : 'Please try again.'}
+                </div>
+              </div>
+            </div>
+            <p className="admin-modal-text">{actionNotice.message}</p>
+            <div className="admin-modal-actions">
+              <button
+                className={`btn btn-sm ${actionNotice.type === 'success' ? 'btn-green' : 'btn-danger'}`}
+                type="button"
+                onClick={() => setActionNotice(null)}
+              >
+                OK
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
