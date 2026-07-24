@@ -8,7 +8,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/"        element={<HomePage />} />
+        <Route path="/homepage"        element={<HomePage />} />
         <Route path="/customer" element={<CustomerPage />} />
         <Route path="/staff"          element={<StaffPage />} />
         <Route path="/staff/:token"    element={<StaffPage />} />
