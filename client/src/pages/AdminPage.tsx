@@ -353,7 +353,7 @@ export default function AdminPage() {
                         ))}
                         {filtered.length === 0 && (
                           <tr>
-                            <td colSpan={5} style={{ textAlign: 'center', color: 'var(--c400)', padding: 24 }}>
+                            <td colSpan={10} style={{ textAlign: 'center', color: 'var(--c400)', padding: 24 }}>
                               No customers found.
                             </td>
                           </tr>
